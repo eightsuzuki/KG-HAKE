@@ -102,3 +102,6 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+z-datasez_datasets_knowledge_embedding
+models
