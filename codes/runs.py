@@ -8,7 +8,7 @@ import torch
 
 from torch.utils.data import DataLoader
 
-from models import KGEModel, ModE, HAKE
+from models import KGEModel, ModE, HAKE, TransD, STransE, TransE, TransH, TransR, ComplEx, RotatE, DistMult, pRotatE
 
 from data import TrainDataset, BatchType, ModeType, DataReader
 from data import BidirectionalOneShotIterator
@@ -158,10 +158,29 @@ def main(args):
     logging.info('Num Valid: {}'.format(len(data_reader.valid_data)))
     logging.info('Num Test: {}'.format(len(data_reader.test_data)))
 
+
     if args.model == 'ModE':
         kge_model = ModE(num_entity, num_relation, args.hidden_dim, args.gamma)
     elif args.model == 'HAKE':
         kge_model = HAKE(num_entity, num_relation, args.hidden_dim, args.gamma, args.modulus_weight, args.phase_weight)
+    elif args.model == 'TransD':
+        kge_model = TransD(num_entity, num_relation, args.hidden_dim, args.gamma)
+    elif args.model == 'STransE':
+        kge_model = STransE(num_entity, num_relation, args.hidden_dim, args.gamma)
+    elif args.model == 'TransE':
+        kge_model = TransE(num_entity, num_relation, args.hidden_dim, args.gamma)
+    elif args.model == 'TransH':
+        kge_model = TransH(num_entity, num_relation, args.hidden_dim, args.gamma)
+    elif args.model == 'TransR':
+        kge_model = TransR(num_entity, num_relation, args.hidden_dim, args.gamma)
+    elif args.model == 'ComplEx':
+        kge_model = ComplEx(num_entity, num_relation, args.hidden_dim, args.gamma)
+    elif args.model == 'RotatE':
+        kge_model = RotatE(num_entity, num_relation, args.hidden_dim, args.gamma)
+    elif args.model == 'DistMult':
+        kge_model = DistMult(num_entity, num_relation, args.hidden_dim, args.gamma)
+    elif args.model == 'pRotatE':
+        kge_model = PRotatE(num_entity, num_relation, args.hidden_dim, args.gamma)
 
     logging.info('Model Parameter Configuration:')
     for name, param in kge_model.named_parameters():

@@ -469,17 +469,6 @@ class TransE(KGEModel):
 
         return score
 
-    def evaluate(self):
-        # The implementation of this method depends on the specific requirements of your evaluation logic.
-        # You may need to adapt it according to your use case.
-        pass
-
-    def _check_norm(self):
-        print('-----Check norm-----')
-        entity_embedding_norm = torch.norm(self.entity_embedding, p=2, dim=1).detach().numpy()
-        relation_embedding_norm = torch.norm(self.relation_embedding, p=2, dim=1).detach().numpy()
-        print(f'Entity norm: {entity_embedding_norm}, Relation norm: {relation_embedding_norm}')
-
 
 class TransH(KGEModel):
     def __init__(self, num_entity, num_relation, hidden_dim):
@@ -516,7 +505,6 @@ class TransH(KGEModel):
             score = torch.norm(dis, p=2, dim=2).squeeze()
 
         return score
-
 
 
 class TransR(KGEModel):
@@ -558,6 +546,217 @@ class TransR(KGEModel):
 
         return score
 
+
+class ComplEx(KGEModel):
+    def __init__(self, num_entity, num_relation, hidden_dim, gamma):
+        super(ComplEx, self).__init__()
+        self.num_entity = num_entity
+        self.num_relation = num_relation
+        self.hidden_dim = hidden_dim
+        self.epsilon = 2.0
+
+        self.gamma = nn.Parameter(
+            torch.Tensor([gamma]),
+            requires_grad=False
+        )
+
+        self.embedding_range = nn.Parameter(
+            torch.Tensor([(self.gamma.item() + self.epsilon) / hidden_dim]),
+            requires_grad=False
+        )
+
+        self.entity_embedding = nn.Parameter(torch.zeros(num_entity, hidden_dim * 2))
+        nn.init.uniform_(
+            tensor=self.entity_embedding,
+            a=-self.embedding_range.item(),
+            b=self.embedding_range.item()
+        )
+
+        self.relation_embedding = nn.Parameter(torch.zeros(num_relation, hidden_dim * 2))
+        nn.init.uniform_(
+            tensor=self.relation_embedding,
+            a=-self.embedding_range.item(),
+            b=self.embedding_range.item()
+        )
+
+    def func(self, head, rel, tail, batch_type):
+        re_head, im_head = torch.chunk(head, 2, dim=2)
+        re_relation, im_relation = torch.chunk(rel, 2, dim=2)
+        re_tail, im_tail = torch.chunk(tail, 2, dim=2)
+
+        if batch_type == BatchType.HEAD_BATCH:
+            re_score = re_relation * re_tail + im_relation * im_tail
+            im_score = re_relation * im_tail - im_relation * re_tail
+            score = re_head * re_score + im_head * im_score
+        elif batch_type == BatchType.TAIL_BATCH:
+            re_score = re_head * re_relation - im_head * im_relation
+            im_score = re_head * im_relation + im_head * re_relation
+            score = re_score * re_tail + im_score * im_tail
+        else:
+            raise ValueError('batch_type %s not supported!' % batch_type)
+
+        score = score.sum(dim=2)
+        return score
+
+
+class RotatE(KGEModel):
+    def __init__(self, num_entity, num_relation, hidden_dim, gamma):
+        super(RotatE, self).__init__()
+        self.num_entity = num_entity
+        self.num_relation = num_relation
+        self.hidden_dim = hidden_dim
+        self.epsilon = 2.0
+
+        self.gamma = nn.Parameter(
+            torch.Tensor([gamma]),
+            requires_grad=False
+        )
+
+        self.embedding_range = nn.Parameter(
+            torch.Tensor([(self.gamma.item() + self.epsilon) / hidden_dim]),
+            requires_grad=False
+        )
+
+        self.entity_embedding = nn.Parameter(torch.zeros(num_entity, hidden_dim * 2))
+        nn.init.uniform_(
+            tensor=self.entity_embedding,
+            a=-self.embedding_range.item(),
+            b=self.embedding_range.item()
+        )
+
+        self.relation_embedding = nn.Parameter(torch.zeros(num_relation, hidden_dim * 2))
+        nn.init.uniform_(
+            tensor=self.relation_embedding,
+            a=-self.embedding_range.item(),
+            b=self.embedding_range.item()
+        )
+
+    def func(self, head, relation, tail, mode):
+        pi = 3.14159265358979323846
+
+        re_head, im_head = torch.chunk(head, 2, dim=2)
+        re_tail, im_tail = torch.chunk(tail, 2, dim=2)
+
+        # Make phases of relations uniformly distributed in [-pi, pi]
+
+        phase_relation = relation / (self.embedding_range.item() / pi)
+
+        re_relation = torch.cos(phase_relation)
+        im_relation = torch.sin(phase_relation)
+
+        if mode == 'head-batch':
+            re_score = re_relation * re_tail + im_relation * im_tail
+            im_score = re_relation * im_tail - im_relation * re_tail
+            re_score = re_score - re_head
+            im_score = im_score - im_head
+        else:
+            re_score = re_head * re_relation - im_head * im_relation
+            im_score = re_head * im_relation + im_head * im_relation
+            re_score = re_score - re_tail
+            im_score = im_score - im_tail
+
+        score = torch.stack([re_score, im_score], dim=0)
+        score = score.norm(dim=0)
+
+        score = self.gamma.item() - score.sum(dim=2)
+        return score
+
+
+class DistMult(KGEModel):
+    def __init__(self, num_entity, num_relation, hidden_dim, gamma):
+        super(DistMult, self).__init__()
+        self.num_entity = num_entity
+        self.num_relation = num_relation
+        self.hidden_dim = hidden_dim
+        self.epsilon = 2.0
+
+        self.gamma = nn.Parameter(
+            torch.Tensor([gamma]),
+            requires_grad=False
+        )
+
+        self.embedding_range = nn.Parameter(
+            torch.Tensor([(self.gamma.item() + self.epsilon) / hidden_dim]),
+            requires_grad=False
+        )
+
+        self.entity_embedding = nn.Parameter(torch.zeros(num_entity, hidden_dim * 2))
+        nn.init.uniform_(
+            tensor=self.entity_embedding,
+            a=-self.embedding_range.item(),
+            b=self.embedding_range.item()
+        )
+
+        self.relation_embedding = nn.Parameter(torch.zeros(num_relation, hidden_dim * 2))
+        nn.init.uniform_(
+            tensor=self.relation_embedding,
+            a=-self.embedding_range.item(),
+            b=self.embedding_range.item()
+        )
+
+    def func(self, head, relation, tail, mode):
+        if mode == BatchType.HEAD_BATCH:
+            score = head * (relation * tail)
+        else:
+            score = (head * relation) * tail
+
+        score = score.sum(dim=2)
+        return score
+
+
+class pRotatE(KGEModel):
+    def __init__(self, num_entity, num_relation, hidden_dim, gamma):
+        super(PRotatE, self).__init__()
+        self.num_entity = num_entity
+        self.num_relation = num_relation
+        self.hidden_dim = hidden_dim
+        self.epsilon = 2.0
+
+        self.gamma = nn.Parameter(
+            torch.Tensor([gamma]),
+            requires_grad=False
+        )
+
+        self.embedding_range = nn.Parameter(
+            torch.Tensor([(self.gamma.item() + self.epsilon) / hidden_dim]),
+            requires_grad=False
+        )
+
+        self.modulus = nn.Parameter(torch.Tensor([[0.5 * self.embedding_range.item()]]))
+
+        self.entity_embedding = nn.Parameter(torch.zeros(num_entity, hidden_dim * 2))
+        nn.init.uniform_(
+            tensor=self.entity_embedding,
+            a=-self.embedding_range.item(),
+            b=self.embedding_range.item()
+        )
+
+        self.relation_embedding = nn.Parameter(torch.zeros(num_relation, hidden_dim * 2))
+        nn.init.uniform_(
+            tensor=self.relation_embedding,
+            a=-self.embedding_range.item(),
+            b=self.embedding_range.item()
+        )
+
+    def func(self, head, relation, tail, mode):
+        pi = 3.14159262358979323846
+
+        # Make phases of entities and relations uniformly distributed in [-pi, pi]
+
+        phase_head = head / (self.embedding_range.item() / pi)
+        phase_relation = relation / (self.embedding_range.item() / pi)
+        phase_tail = tail / (self.embedding_range.item() / pi)
+
+        if mode == BatchType.HEAD_BATCH:
+            score = phase_head + (phase_relation - phase_tail)
+        else:
+            score = (phase_head + phase_relation) - phase_tail
+
+        score = torch.sin(score)
+        score = torch.abs(score)
+
+        score = self.gamma.item() - score.sum(dim=2) * self.modulus
+        return score
 
 
 
