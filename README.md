@@ -55,6 +55,8 @@ bash runs.sh train HAKE FB15k-237 0 0 1024 256 1000 9.0 1.0 0.00005 100000 16 3.
 # YAGO3-10
 bash runs.sh train HAKE YAGO3-10 0 0 1024 256 500 24.0 1.0 0.0002 180000 4 1.0 0.5
 ```
+bash runs.sh train ModE wn18rr <gpu_id>0 <save_id>0 <train_batch_size>512 <negative_sample_size>1024 <hidden_dim>500 <gamma>6 <alpha>0.5 \
+<learning_rate>0.0001 <num_train_steps>80000 <test_batch_size>8 [modulus_weight]❌ [phase_weight]❌
 
 ### ModE
 ```

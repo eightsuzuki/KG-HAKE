@@ -14,6 +14,7 @@ from data import TrainDataset, BatchType, ModeType, DataReader
 from data import BidirectionalOneShotIterator
 
 
+
 def parse_args(args=None):
     parser = argparse.ArgumentParser(
         description='Training and Testing Knowledge Graph Embedding Models',
@@ -158,7 +159,6 @@ def main(args):
     logging.info('Num Valid: {}'.format(len(data_reader.valid_data)))
     logging.info('Num Test: {}'.format(len(data_reader.test_data)))
 
-
     if args.model == 'ModE':
         kge_model = ModE(num_entity, num_relation, args.hidden_dim, args.gamma)
     elif args.model == 'HAKE':
@@ -180,7 +180,7 @@ def main(args):
     elif args.model == 'DistMult':
         kge_model = DistMult(num_entity, num_relation, args.hidden_dim, args.gamma)
     elif args.model == 'pRotatE':
-        kge_model = PRotatE(num_entity, num_relation, args.hidden_dim, args.gamma)
+        kge_model = pRotatE(num_entity, num_relation, args.hidden_dim, args.gamma)
 
     logging.info('Model Parameter Configuration:')
     for name, param in kge_model.named_parameters():

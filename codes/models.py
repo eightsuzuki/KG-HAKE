@@ -363,6 +363,43 @@ class HAKE(KGEModel):
         r_score = torch.norm(r_score, dim=2) * self.modulus_weight
 
         return self.gamma.item() - (phase_score + r_score)
+        
+
+class TransE(KGEModel):
+    def __init__(self, num_entity, num_relation, hidden_dim, gamma):
+        super(TransE, self).__init__()
+        self.num_entity = num_entity
+        self.num_relation = num_relation
+        self.hidden_dim = hidden_dim
+        self.epsilon = 2.0
+
+        self.gamma = nn.Parameter(
+            torch.Tensor([gamma]),
+            requires_grad=False
+        )
+
+        self.embedding_range = nn.Parameter(
+            torch.Tensor([(self.gamma.item() + self.epsilon) / hidden_dim]),
+            requires_grad=False
+        )
+
+        self.entity_embedding = nn.Parameter(torch.zeros(num_entity, hidden_dim))
+        nn.init.uniform_(
+            tensor=self.entity_embedding,
+            a=-self.embedding_range.item(),
+            b=self.embedding_range.item()
+        )
+
+        self.relation_embedding = nn.Parameter(torch.zeros(num_relation, hidden_dim))
+        nn.init.uniform_(
+            tensor=self.relation_embedding,
+            a=-self.embedding_range.item(),
+            b=self.embedding_range.item()
+        )
+
+
+    def func(self, head, rel, tail, batch_type):
+        return  torch.sqrt(torch.sum(torch.square(head + rel - tail), dim=1))
 
         
 class TransD(KGEModel):
@@ -438,34 +475,6 @@ class STransE(KGEModel):
             score = torch.norm(dis, p=1, dim=1)
         elif batch_type == BatchType.HEAD_BATCH or batch_type == BatchType.TAIL_BATCH:
             score = torch.norm(dis, p=1, dim=2).squeeze()
-
-        return score
-
-
-class TransE(KGEModel):
-    def __init__(self, num_entity, num_relation, hidden_dim):
-        super(TransE, self).__init__()
-        self.num_entity = num_entity
-        self.num_relation = num_relation
-        self.hidden_dim = hidden_dim
-
-        # Define your embeddings and parameters here
-        self.entity_embedding = nn.Parameter(torch.zeros(num_entity, hidden_dim))
-        self.relation_embedding = nn.Parameter(torch.zeros(num_relation, hidden_dim))
-
-        # Initialize your embeddings and parameters as needed
-        nn.init.uniform_(self.entity_embedding, a=-1.0, b=1.0)
-        nn.init.uniform_(self.relation_embedding, a=-1.0, b=1.0)
-
-    def func(self, head, rel, tail, batch_type):
-        h = head  # (batch_size, hidden_dim)
-        r = rel   # (batch_size, hidden_dim)
-        t = tail  # (batch_size, hidden_dim)
-
-        if self.params.score_func.lower() == 'l1':  # L1 score
-            score = torch.sum(torch.abs(h + r - t), dim=1)
-        elif self.params.score_func.lower() == 'l2':  # L2 score
-            score = torch.sqrt(torch.sum(torch.square(h + r - t), dim=1))
 
         return score
 
