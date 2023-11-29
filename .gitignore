@@ -108,5 +108,5 @@ models
 
 KnowledgeGraphEmbedding
 
-otherModel/KnowledgeGraphEmbedding/models
-KGEval
+./otherModel/KnowledgeGraphEmbedding/models
+./KGEval
