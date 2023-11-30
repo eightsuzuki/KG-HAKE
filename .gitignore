@@ -108,5 +108,7 @@ models
 
 KnowledgeGraphEmbedding
 
-./otherModel/KnowledgeGraphEmbedding/models
-./KGEval
+otherModel
+otherModel/TransE-Knowledge-Graph-Embedding
+
+KGEval
