@@ -8,11 +8,10 @@ import torch
 
 from torch.utils.data import DataLoader
 
-from models import KGEModel, ModE, HAKE, TransD, STransE, TransE, TransH, TransR, ComplEx, RotatE, DistMult, pRotatE
+from models import KGEModel, ModE, HAKE, HAKE1, HAKE2, HAKE3, HAKE4, TransD, STransE, TransE, TransH, TransR, ComplEx, RotatE, DistMult, pRotatE
 
 from data import TrainDataset, BatchType, ModeType, DataReader
 from data import BidirectionalOneShotIterator
-
 
 
 def parse_args(args=None):
@@ -163,6 +162,14 @@ def main(args):
         kge_model = ModE(num_entity, num_relation, args.hidden_dim, args.gamma)
     elif args.model == 'HAKE':
         kge_model = HAKE(num_entity, num_relation, args.hidden_dim, args.gamma, args.modulus_weight, args.phase_weight)
+    elif args.model == 'HAKE1':
+        kge_model = HAKE1(num_entity, num_relation, args.hidden_dim, args.gamma, args.modulus_weight, args.phase_weight)
+    elif args.model == 'HAKE2':
+        kge_model = HAKE2(num_entity, num_relation, args.hidden_dim, args.gamma, args.modulus_weight, args.phase_weight)
+    elif args.model == 'HAKE3':
+        kge_model = HAKE3(num_entity, num_relation, args.hidden_dim, args.gamma, args.modulus_weight, args.phase_weight)
+    elif args.model == 'HAKE4':
+        kge_model = HAKE4(num_entity, num_relation, args.hidden_dim, args.gamma, args.modulus_weight, args.phase_weight)
     elif args.model == 'TransD':
         kge_model = TransD(num_entity, num_relation, args.hidden_dim, args.gamma)
     elif args.model == 'STransE':
