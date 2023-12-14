@@ -814,6 +814,398 @@ class HAKE5(KGEModel):
         return self.gamma.item() - (phase1_score + phase2_score + r_score)
        
 
+class HAKE6(KGEModel):
+    def __init__(self, num_entity, num_relation, hidden_dim, gamma, modulus_weight=1.0, phase_weight=0.5):
+        super(HAKE6, self).__init__()
+        self.num_entity = num_entity
+        self.num_relation = num_relation
+        self.hidden_dim = hidden_dim
+        self.epsilon = 2.0
+
+        self.gamma = nn.Parameter(
+            torch.Tensor([gamma]),
+            requires_grad=False
+        )
+
+        self.embedding_range = nn.Parameter(
+            torch.Tensor([(self.gamma.item() + self.epsilon) / hidden_dim]),
+            requires_grad=False
+        )
+
+        self.entity_embedding = nn.Parameter(torch.zeros(num_entity, hidden_dim * 2))
+        nn.init.uniform_(
+            tensor=self.entity_embedding,
+            a=-self.embedding_range.item(),
+            b=self.embedding_range.item()
+        )
+
+        self.relation_embedding = nn.Parameter(torch.zeros(num_relation, hidden_dim * 3))
+        nn.init.uniform_(
+            tensor=self.relation_embedding,
+            a=-self.embedding_range.item(),
+            b=self.embedding_range.item()
+        )
+
+        nn.init.ones_(
+            tensor=self.relation_embedding[:, hidden_dim:2 * hidden_dim]
+        )
+
+        nn.init.zeros_(
+            tensor=self.relation_embedding[:, 2 * hidden_dim:3 * hidden_dim]
+        )
+
+        self.phase_weight = nn.Parameter(torch.Tensor([[phase_weight * self.embedding_range.item()]]))
+        self.modulus_weight = nn.Parameter(torch.Tensor([[modulus_weight]]))
+
+        self.pi = 3.14159262358979323846
+
+
+    def func(self, head, rel, tail, batch_type):
+        phase_head, mod_head = torch.chunk(head, 2, dim=2)
+        phase_relation, mod_relation, bias_relation = torch.chunk(rel, 3, dim=2)
+        phase_tail, mod_tail = torch.chunk(tail, 2, dim=2)
+
+        phase_head = phase_head / (self.embedding_range.item() / self.pi)
+        phase_relation = phase_relation / (self.embedding_range.item() / self.pi)
+        phase_tail = phase_tail / (self.embedding_range.item() / self.pi)
+
+        if batch_type == BatchType.HEAD_BATCH:
+            phase_score = phase_head + (phase_relation - phase_tail)
+        else:
+            phase_score = (phase_head + phase_relation) - phase_tail
+
+        mod_relation = torch.abs(mod_relation)
+        bias_relation = torch.clamp(bias_relation, max=1)
+        indicator = (bias_relation < -mod_relation)
+        bias_relation[indicator] = -mod_relation[indicator]
+
+        r_score = mod_head * (mod_relation + bias_relation) - mod_tail * (1 - bias_relation)
+
+        phase_score = torch.sum(torch.abs(torch.min(phase_score, 2 * self.pi - phase_score)), dim=2) * self.phase_weight
+        r_score = torch.norm(r_score, dim=2) * self.modulus_weight
+
+        return self.gamma.item() - (phase_score + r_score)
+
+
+class HAKE7(KGEModel):
+    def __init__(self, num_entity, num_relation, hidden_dim, gamma, modulus_weight=1.0, phase_weight=0.5):
+        super(HAKE7, self).__init__()
+        self.num_entity = num_entity
+        self.num_relation = num_relation
+        self.hidden_dim = hidden_dim
+        self.epsilon = 2.0
+
+        self.gamma = nn.Parameter(
+            torch.Tensor([gamma]),
+            requires_grad=False
+        )
+
+        self.embedding_range = nn.Parameter(
+            torch.Tensor([(self.gamma.item() + self.epsilon) / hidden_dim]),
+            requires_grad=False
+        )
+
+        self.entity_embedding = nn.Parameter(torch.zeros(num_entity, hidden_dim * 2))
+        nn.init.uniform_(
+            tensor=self.entity_embedding,
+            a=-self.embedding_range.item(),
+            b=self.embedding_range.item()
+        )
+
+        self.relation_embedding = nn.Parameter(torch.zeros(num_relation, hidden_dim * 3))
+        nn.init.uniform_(
+            tensor=self.relation_embedding,
+            a=-self.embedding_range.item(),
+            b=self.embedding_range.item()
+        )
+
+        nn.init.ones_(
+            tensor=self.relation_embedding[:, hidden_dim:2 * hidden_dim]
+        )
+
+        nn.init.zeros_(
+            tensor=self.relation_embedding[:, 2 * hidden_dim:3 * hidden_dim]
+        )
+
+        self.phase_weight = nn.Parameter(torch.Tensor([[phase_weight * self.embedding_range.item()]]))
+        self.modulus_weight = nn.Parameter(torch.Tensor([[modulus_weight]]))
+
+        self.pi = 3.14159262358979323846
+
+
+    def func(self, head, rel, tail, batch_type):
+        phase_head, mod_head = torch.chunk(head, 2, dim=2)
+        phase_relation, mod_relation, bias_relation = torch.chunk(rel, 3, dim=2)
+        phase_tail, mod_tail = torch.chunk(tail, 2, dim=2)
+
+        phase_head = phase_head / (self.embedding_range.item() / self.pi)
+        phase_relation = phase_relation / (self.embedding_range.item() / self.pi)
+        phase_tail = phase_tail / (self.embedding_range.item() / self.pi)
+
+        if batch_type == BatchType.HEAD_BATCH:
+            phase_score = phase_head + (phase_relation - phase_tail)
+        else:
+            phase_score = (phase_head + phase_relation) - phase_tail
+
+        mod_relation = torch.abs(mod_relation)
+        bias_relation = torch.clamp(bias_relation, max=1)
+        indicator = (bias_relation < -mod_relation)
+        bias_relation[indicator] = -mod_relation[indicator]
+
+        r_score = mod_head * (mod_relation + bias_relation) - mod_tail * (1 - bias_relation)
+
+        phase_score = torch.sum(torch.abs(phase_score * (2 * self.pi - phase_score)), dim=2) * self.phase_weight
+        r_score = torch.norm(r_score, dim=2) * self.modulus_weight
+
+        return self.gamma.item() - (phase_score + r_score)
+
+               
+class HAKE3DAVE(KGEModel):
+    def __init__(self, num_entity, num_relation, hidden_dim, gamma, modulus_weight=1.0, phase_weight=0.25):
+        super(HAKE3DAVE, self).__init__()
+        self.num_entity = num_entity
+        self.num_relation = num_relation
+        self.hidden_dim = hidden_dim
+        self.epsilon = 2.0
+
+        self.gamma = nn.Parameter(
+            torch.Tensor([gamma]),
+            requires_grad=False
+        )
+
+        self.embedding_range = nn.Parameter(
+            torch.Tensor([(self.gamma.item() + self.epsilon) / hidden_dim]),
+            requires_grad=False
+        )
+
+        self.entity_embedding = nn.Parameter(torch.zeros(num_entity, hidden_dim * 3))
+        nn.init.uniform_(
+            tensor=self.entity_embedding,
+            a=-self.embedding_range.item(),
+            b=self.embedding_range.item()
+        )
+
+        self.relation_embedding = nn.Parameter(torch.zeros(num_relation, hidden_dim * 4))
+        nn.init.uniform_(
+            tensor=self.relation_embedding,
+            a=-self.embedding_range.item(),
+            b=self.embedding_range.item()
+        )
+
+        nn.init.ones_(
+            tensor=self.relation_embedding[:, hidden_dim:2 * hidden_dim]
+        )
+
+        nn.init.zeros_(
+            tensor=self.relation_embedding[:, 2 * hidden_dim:3 * hidden_dim]
+        )
+
+        self.phase_weight = nn.Parameter(torch.Tensor([[phase_weight * self.embedding_range.item()]]))
+        self.modulus_weight = nn.Parameter(torch.Tensor([[modulus_weight]]))
+
+        self.pi = 3.14159262358979323846
+    
+    def func(self, head, rel, tail, batch_type):
+        phase1_head, phase2_head, mod_head = torch.chunk(head, 3, dim=2)
+
+        phase1_relation, phase2_relation, mod_relation, bias_relation = torch.chunk(rel, 4, dim=2)
+
+        phase1_tail, phase2_tail, mod_tail = torch.chunk(tail, 3, dim=2)
+
+        phase1_head = phase1_head / (self.embedding_range.item() / self.pi)
+        phase2_head = phase2_head / (self.embedding_range.item() / self.pi)
+        phase1_relation = phase1_relation / (self.embedding_range.item() / self.pi)
+        phase2_relation = phase2_relation / (self.embedding_range.item() / self.pi)
+        phase1_tail = phase1_tail / (self.embedding_range.item() / self.pi)
+        phase2_tail = phase2_tail / (self.embedding_range.item() / self.pi)
+
+        if batch_type == BatchType.HEAD_BATCH:
+            phase1_score = phase1_head + (phase1_relation - phase1_tail)
+            phase2_score = phase2_head + (phase2_relation - phase2_tail)
+            ave = (phase1_head + phase1_relation + phase1_tail)/2
+        else:
+            phase1_score = (phase1_head + phase1_relation) - phase1_tail
+            phase2_score = (phase2_head + phase2_relation) - phase2_tail
+            ave = (phase1_head + phase1_relation + phase1_tail)/2
+
+        mod_relation = torch.abs(mod_relation)
+        bias_relation = torch.clamp(bias_relation, max=1)
+        indicator = (bias_relation < -mod_relation)
+        bias_relation[indicator] = -mod_relation[indicator]
+
+        r_score = mod_head * (mod_relation + bias_relation) - mod_tail * (1 - bias_relation)
+
+        phase1_score = torch.sum(torch.abs(torch.sin(phase1_score / 2)), dim=2) * self.phase_weight
+        phase2_score = torch.sum(torch.abs(torch.sin(ave) * torch.sin(phase2_score / 2)), dim=2) * self.phase_weight
+        r_score = torch.norm(r_score, dim=2) * self.modulus_weight
+
+        return self.gamma.item() - (phase1_score + phase2_score + r_score)
+       
+               
+class HAKE3DMIN(KGEModel):
+    def __init__(self, num_entity, num_relation, hidden_dim, gamma, modulus_weight=1.0, phase_weight=0.25):
+        super(HAKE3DMIN, self).__init__()
+        self.num_entity = num_entity
+        self.num_relation = num_relation
+        self.hidden_dim = hidden_dim
+        self.epsilon = 2.0
+
+        self.gamma = nn.Parameter(
+            torch.Tensor([gamma]),
+            requires_grad=False
+        )
+
+        self.embedding_range = nn.Parameter(
+            torch.Tensor([(self.gamma.item() + self.epsilon) / hidden_dim]),
+            requires_grad=False
+        )
+
+        self.entity_embedding = nn.Parameter(torch.zeros(num_entity, hidden_dim * 3))
+        nn.init.uniform_(
+            tensor=self.entity_embedding,
+            a=-self.embedding_range.item(),
+            b=self.embedding_range.item()
+        )
+
+        self.relation_embedding = nn.Parameter(torch.zeros(num_relation, hidden_dim * 4))
+        nn.init.uniform_(
+            tensor=self.relation_embedding,
+            a=-self.embedding_range.item(),
+            b=self.embedding_range.item()
+        )
+
+        nn.init.ones_(
+            tensor=self.relation_embedding[:, hidden_dim:2 * hidden_dim]
+        )
+
+        nn.init.zeros_(
+            tensor=self.relation_embedding[:, 2 * hidden_dim:3 * hidden_dim]
+        )
+
+        self.phase_weight = nn.Parameter(torch.Tensor([[phase_weight * self.embedding_range.item()]]))
+        self.modulus_weight = nn.Parameter(torch.Tensor([[modulus_weight]]))
+
+        self.pi = 3.14159262358979323846
+    
+    def func(self, head, rel, tail, batch_type):
+        phase1_head, phase2_head, mod_head = torch.chunk(head, 3, dim=2)
+
+        phase1_relation, phase2_relation, mod_relation, bias_relation = torch.chunk(rel, 4, dim=2)
+
+        phase1_tail, phase2_tail, mod_tail = torch.chunk(tail, 3, dim=2)
+
+        phase1_head = phase1_head / (self.embedding_range.item() / self.pi)
+        phase2_head = phase2_head / (self.embedding_range.item() / self.pi)
+        phase1_relation = phase1_relation / (self.embedding_range.item() / self.pi)
+        phase2_relation = phase2_relation / (self.embedding_range.item() / self.pi)
+        phase1_tail = phase1_tail / (self.embedding_range.item() / self.pi)
+        phase2_tail = phase2_tail / (self.embedding_range.item() / self.pi)
+
+        if batch_type == BatchType.HEAD_BATCH:
+            phase1_score = phase1_head + (phase1_relation - phase1_tail)
+            phase2_score = phase2_head + (phase2_relation - phase2_tail)
+        else:
+            phase1_score = (phase1_head + phase1_relation) - phase1_tail
+            phase2_score = (phase2_head + phase2_relation) - phase2_tail
+
+        min = torch.min(phase1_head + phase1_relation, phase1_tail)
+
+        mod_relation = torch.abs(mod_relation)
+        bias_relation = torch.clamp(bias_relation, max=1)
+        indicator = (bias_relation < -mod_relation)
+        bias_relation[indicator] = -mod_relation[indicator]
+
+        r_score = mod_head * (mod_relation + bias_relation) - mod_tail * (1 - bias_relation)
+
+        phase1_score = torch.sum(torch.abs(torch.sin(phase1_score / 2)), dim=2) * self.phase_weight
+        phase2_score = torch.sum(torch.abs(torch.sin(min) * torch.sin(phase2_score / 2)), dim=2) * self.phase_weight
+        r_score = torch.norm(r_score, dim=2) * self.modulus_weight
+
+        return self.gamma.item() - (phase1_score + phase2_score + r_score)
+       
+               
+class HAKE3DMAX(KGEModel):
+    def __init__(self, num_entity, num_relation, hidden_dim, gamma, modulus_weight=1.0, phase_weight=0.25):
+        super(HAKE3DMAX, self).__init__()
+        self.num_entity = num_entity
+        self.num_relation = num_relation
+        self.hidden_dim = hidden_dim
+        self.epsilon = 2.0
+
+        self.gamma = nn.Parameter(
+            torch.Tensor([gamma]),
+            requires_grad=False
+        )
+
+        self.embedding_range = nn.Parameter(
+            torch.Tensor([(self.gamma.item() + self.epsilon) / hidden_dim]),
+            requires_grad=False
+        )
+
+        self.entity_embedding = nn.Parameter(torch.zeros(num_entity, hidden_dim * 3))
+        nn.init.uniform_(
+            tensor=self.entity_embedding,
+            a=-self.embedding_range.item(),
+            b=self.embedding_range.item()
+        )
+
+        self.relation_embedding = nn.Parameter(torch.zeros(num_relation, hidden_dim * 4))
+        nn.init.uniform_(
+            tensor=self.relation_embedding,
+            a=-self.embedding_range.item(),
+            b=self.embedding_range.item()
+        )
+
+        nn.init.ones_(
+            tensor=self.relation_embedding[:, hidden_dim:2 * hidden_dim]
+        )
+
+        nn.init.zeros_(
+            tensor=self.relation_embedding[:, 2 * hidden_dim:3 * hidden_dim]
+        )
+
+        self.phase_weight = nn.Parameter(torch.Tensor([[phase_weight * self.embedding_range.item()]]))
+        self.modulus_weight = nn.Parameter(torch.Tensor([[modulus_weight]]))
+
+        self.pi = 3.14159262358979323846
+    
+    def func(self, head, rel, tail, batch_type):
+        phase1_head, phase2_head, mod_head = torch.chunk(head, 3, dim=2)
+
+        phase1_relation, phase2_relation, mod_relation, bias_relation = torch.chunk(rel, 4, dim=2)
+
+        phase1_tail, phase2_tail, mod_tail = torch.chunk(tail, 3, dim=2)
+
+        phase1_head = phase1_head / (self.embedding_range.item() / self.pi)
+        phase2_head = phase2_head / (self.embedding_range.item() / self.pi)
+        phase1_relation = phase1_relation / (self.embedding_range.item() / self.pi)
+        phase2_relation = phase2_relation / (self.embedding_range.item() / self.pi)
+        phase1_tail = phase1_tail / (self.embedding_range.item() / self.pi)
+        phase2_tail = phase2_tail / (self.embedding_range.item() / self.pi)
+
+        if batch_type == BatchType.HEAD_BATCH:
+            phase1_score = phase1_head + (phase1_relation - phase1_tail)
+            phase2_score = phase2_head + (phase2_relation - phase2_tail)
+        else:
+            phase1_score = (phase1_head + phase1_relation) - phase1_tail
+            phase2_score = (phase2_head + phase2_relation) - phase2_tail
+
+        max = torch.min(phase1_head + phase1_relation, phase1_tail)
+
+        mod_relation = torch.abs(mod_relation)
+        bias_relation = torch.clamp(bias_relation, max=1)
+        indicator = (bias_relation < -mod_relation)
+        bias_relation[indicator] = -mod_relation[indicator]
+
+        r_score = mod_head * (mod_relation + bias_relation) - mod_tail * (1 - bias_relation)
+
+        phase1_score = torch.sum(torch.abs(torch.sin(phase1_score / 2)), dim=2) * self.phase_weight
+        phase2_score = torch.sum(torch.abs(torch.sin(max) * torch.sin(phase2_score / 2)), dim=2) * self.phase_weight
+        r_score = torch.norm(r_score, dim=2) * self.modulus_weight
+
+        return self.gamma.item() - (phase1_score + phase2_score + r_score)
+       
+
 
 class TransE(KGEModel):
     def __init__(self, num_entity, num_relation, hidden_dim, gamma):

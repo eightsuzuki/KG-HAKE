@@ -47,7 +47,7 @@ To reproduce the results of HAKE and ModE, run the following commands.
 ### HAKE
 ```
 # WN18RR
-bash runs.sh train HAKE wn18rr 0 0 512 1024 500 6.0 0.5 0.00005 80000 8 0.5 0.5
+bash runs.sh train HAKE3DMIN wn18rr 0 0 512 1024 500 6.0 0.5 0.00005 80000 8 0.5 0.5
 
 # FB15k-237
 bash runs.sh train HAKE FB15k-237 0 0 1024 256 1000 9.0 1.0 0.00005 100000 16 3.5 1.0
