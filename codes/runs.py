@@ -8,7 +8,7 @@ import torch
 
 from torch.utils.data import DataLoader
 
-from models import KGEModel, ModE, HAKE, HAKE1, HAKE1_1, HAKE2, HAKE3, HAKE4, HAKE5, HAKE6, HAKE7, HAKE3DAVE, HAKE3DMIN, HAKE3DMAX, TransD, STransE, TransE, TransH, TransR, ComplEx, RotatE, DistMult, pRotatE
+from models import KGEModel, ModE, HAKE, HAKE1, HAKE1_1, HAKE2, HAKE3, HAKE4, HAKE5, HAKE6, HAKE7, HAKE3DAVE, HAKE3DMIN, HAKE3DMAX, HAKERadius, TransD, STransE, TransE, TransH, TransR, ComplEx, RotatE, DistMult, pRotatE
 
 from data import TrainDataset, BatchType, ModeType, DataReader
 from data import BidirectionalOneShotIterator
@@ -184,6 +184,8 @@ def main(args):
         kge_model = HAKE3DMIN(num_entity, num_relation, args.hidden_dim, args.gamma, args.modulus_weight, args.phase_weight)
     elif args.model == 'HAKE3DMAX':
         kge_model = HAKE3DMAX(num_entity, num_relation, args.hidden_dim, args.gamma, args.modulus_weight, args.phase_weight)
+    elif args.model == 'HAKERadius':
+        kge_model = HAKERadius(num_entity, num_relation, args.hidden_dim, args.gamma, args.modulus_weight, args.phase_weight)
     elif args.model == 'TransD':
         kge_model = TransD(num_entity, num_relation, args.hidden_dim, args.gamma)
     elif args.model == 'STransE':
