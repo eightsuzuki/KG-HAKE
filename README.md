@@ -5,30 +5,15 @@ This is the code of paper **Learning Hierarchy-Aware Knowledge Graph Embeddings 
 - Python 3.6+
 - [PyTorch](http://pytorch.org/) 1.0+
 
-## Results
-The results of **HAKE** and the baseline model **ModE** on **WN18RR**, **FB15k-237** and **YAGO3-10** are as follows.
  
-### WN18RR
-| | MRR |  HITS@1 | HITS@3 | HITS@10 |
-|:----------:|:----------:|:----------:|:----------:|:----------:|
-| ModE | 0.472 | 0.427 | 0.486 | 0.564 |
-| HAKE | 0.496 ± 0.001 | 0.452 | 0.516 | 0.582 |
-
-
-### FB15k-237
-| | MRR | HITS@1 | HITS@3 | HITS@10 |
-|:----------:|:----------:|:----------:|:----------:|:----------:|
-| ModE | 0.341 |  0.244 | 0.380 | 0.534 |
-| HAKE | 0.346 ± 0.001 |  0.250 | 0.381 | 0.542 |
-
-### YAGO3-10
-| | MRR | HITS@1 | HITS@3 | HITS@10 |
-|:----------:|:----------:|:----------:|:----------:|:----------:|
-| ModE | 0.510 |  0.421 | 0.562 | 0.660 |
-| HAKE | 0.546  ± 0.001 |  0.462 | 0.596 | 0.694 |
-
-
 ## Running the code 
+
+### Create Env
+```
+conda create -n 3DHAKE
+conda activate 3DHAKE
+conda install pytorch torchvision torchaudio pytorch-cuda=12.1 -c pytorch -c nvidia
+```
 
 ### Usage
 ```
@@ -55,8 +40,6 @@ bash runs.sh train HAKE FB15k-237 0 0 1024 256 1000 9.0 1.0 0.00005 100000 16 3.
 # YAGO3-10
 bash runs.sh train HAKE YAGO3-10 0 0 1024 256 500 24.0 1.0 0.0002 180000 4 1.0 0.5
 ```
-bash runs.sh train ModE wn18rr <gpu_id>0 <save_id>0 <train_batch_size>512 <negative_sample_size>1024 <hidden_dim>500 <gamma>6 <alpha>0.5 \
-<learning_rate>0.0001 <num_train_steps>80000 <test_batch_size>8 [modulus_weight]❌ [phase_weight]❌
 
 ### ModE
 ```
@@ -68,13 +51,15 @@ bash runs.sh train ModE FB15k-237 0 0 1024 256 1000 9.0 1.0 0.0001 100000 16
 
 # YAGO3-10
 bash runs.sh train ModE YAGO3-10 0 0 1024 256 500 24.0 1.0 0.0002 80000 4
+
+# explain
+bash runs.sh train ModE wn18rr <gpu_id>0 <save_id>0 <train_batch_size>512 <negative_sample_size>1024 <hidden_dim>500 <gamma>6 <alpha>0.5 \
+<learning_rate>0.0001 <num_train_steps>80000 <test_batch_size>8 [modulus_weight]❌ [phase_weight]❌
 ```
 
-## Visualization
-To plot entity embeddings on a 2D plane (Figure 4 in our paper), please refer to this [issue](https://github.com/MIRALab-USTC/KGE-HAKE/issues/2).
 
-## Citation
-If you find this code useful, please consider citing the following paper.
+## Acknowledgement
+I refer to the code of [HAKE](https://github.com/MIRALab-USTC/KGE-HAKE). Thanks for their contributions.
 ```
 @inproceedings{zhang2020learning,
   title={Learning Hierarchy-Aware Knowledge Graph Embeddings for Link Prediction},
@@ -85,10 +70,3 @@ If you find this code useful, please consider citing the following paper.
   year={2020}
 }
 ```
-
-## Acknowledgement
-We refer to the code of [RotatE](https://github.com/DeepGraphLearning/KnowledgeGraphEmbedding). Thanks for their contributions.
-
-## Other Repositories
-If you are interested in our work, you may find the following paper useful.
-
