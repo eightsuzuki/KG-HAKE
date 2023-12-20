@@ -92,6 +92,3 @@ We refer to the code of [RotatE](https://github.com/DeepGraphLearning/KnowledgeG
 ## Other Repositories
 If you are interested in our work, you may find the following paper useful.
 
-**Duality-Induced Regularizer for Tensor Factorization Based Knowledge Graph Completion.**
-*Zhanqiu Zhang, Jianyu Cai, Jie Wang.* NeurIPS 2020. [[paper](https://arxiv.org/abs/2011.05816)] [[code](https://github.com/MIRALab-USTC/KGE-DURA)]
-
