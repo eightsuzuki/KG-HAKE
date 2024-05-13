@@ -32999,7 +32999,8 @@ paving_stone.n.01	_hypernym	stone.n.02
 insult.n.02	_hypernym	discourtesy.n.03
 chip.n.07	_has_part	integrated_circuit.n.01
 dither.n.01	_derivationally_related_form	dither.v.02
-inachis.n.01	_hypernym	arthropod_genus.n.01
+inachis.n.01	_hypernym	
+.n.01
 cash_register.n.01	_has_part	adding_machine.n.01
 coarse.a.01	_also_see	rough.a.01
 fall_through.v.01	_hypernym	fail.v.02
@@ -82687,7 +82688,7 @@ collar.v.01	_derivationally_related_form	apprehension.n.04
 decide.v.01	_derivationally_related_form	decision_making.n.01
 sweden.n.01	_has_part	lund.n.01
 congruity.n.01	_hypernym	harmony.n.01
-insect.n.01	_hypernym	arthropod.n.01
+insect.n.01	_hypernym	_hypernym	.n.01
 flatter.v.01	_derivationally_related_form	blandishment.n.01
 commander.n.03	_derivationally_related_form	command.v.01
 setubal.n.01	_instance_hypernym	city.n.01

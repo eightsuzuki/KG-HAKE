@@ -300,6 +300,11 @@ def main(args):
                 log_metrics('Training average', step, metrics)
                 training_logs = []
 
+            if args.valid_steps != 0 and args.do_valid and step % 100 == 0 and step < 10000:
+                logging.info('Evaluating on Valid Dataset...')
+                metrics = kge_model.test_step(kge_model, data_reader, ModeType.VALID, args)
+                log_metrics('Valid', step, metrics)
+
             if args.do_valid and step % args.valid_steps == 0:
                 logging.info('Evaluating on Valid Dataset...')
                 metrics = kge_model.test_step(kge_model, data_reader, ModeType.VALID, args)
