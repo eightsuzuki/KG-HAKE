@@ -415,6 +415,8 @@ class HAKE1(KGEModel):
         phase_head, mod_head = torch.chunk(head, 2, dim=2)
         phase_relation, mod_relation, bias_relation = torch.chunk(rel, 3, dim=2)
         phase_tail, mod_tail = torch.chunk(tail, 2, dim=2)
+        mod_head = torch.abs(mod_head)
+        mod_tail = torch.abs(mod_tail)
 
         phase_head = phase_head / (self.embedding_range.item() / self.pi)
         phase_relation = phase_relation / (self.embedding_range.item() / self.pi)
@@ -432,10 +434,11 @@ class HAKE1(KGEModel):
 
         r_score = mod_head * (mod_relation + bias_relation) - mod_tail * (1 - bias_relation)
 
-        phase_score = torch.norm(phase_score, dim=2) * self.phase_weight
+        phase_score = torch.sum(torch.abs(torch.sin(phase_score / 2)), dim=2) * self.phase_weight
         r_score = torch.norm(r_score, dim=2) * self.modulus_weight
 
         return self.gamma.item() - (phase_score + r_score)
+
 
 
 class HAKE1_1(KGEModel):
@@ -1283,7 +1286,132 @@ class HAKERadius(KGEModel):
         r_score = torch.norm(r_score, dim=2) * self.modulus_weight
 
         return self.gamma.item() - (phase1_score + phase2_score + r_score)
-       
+  
+class AdjustHAKE(KGEModel):
+    def __init__(self, num_entity, num_relation, hidden_dim, gamma, modulus_weight=1.0, phase_weight=0.5, relation_dict=None):
+        super(AdjustHAKE, self).__init__()
+        self.num_entity = num_entity
+        self.num_relation = num_relation
+        self.hidden_dim = hidden_dim
+        self.epsilon = 2.0
+
+        self.gamma = nn.Parameter(
+            torch.Tensor([gamma]),
+            requires_grad=False
+        )
+
+        self.embedding_range = nn.Parameter(
+            torch.Tensor([(self.gamma.item() + self.epsilon) / hidden_dim]),
+            requires_grad=False
+        )
+
+        self.entity_embedding = nn.Parameter(torch.zeros(num_entity, hidden_dim * 2))
+        nn.init.uniform_(
+            tensor=self.entity_embedding,
+            a=-self.embedding_range.item(),
+            b=self.embedding_range.item()
+        )
+
+        self.relation_embedding = nn.Parameter(torch.zeros(num_relation, hidden_dim * 3))
+        nn.init.uniform_(
+            tensor=self.relation_embedding,
+            a=-self.embedding_range.item(),
+            b=self.embedding_range.item()
+        )
+
+        nn.init.ones_(
+            tensor=self.relation_embedding[:, hidden_dim:2 * hidden_dim]
+        )
+
+        nn.init.zeros_(
+            tensor=self.relation_embedding[:, 2 * hidden_dim:3 * hidden_dim]
+        )
+
+        self.phase_weight = nn.Parameter(torch.Tensor([[phase_weight * self.embedding_range.item()]]))
+        self.modulus_weight = nn.Parameter(torch.Tensor([[modulus_weight]]))
+
+        self.pi = 3.14159265358979323846
+
+        # relation_dictを追加
+        self.relation_dict = relation_dict
+
+    def func(self, head, rel, tail, batch_type):
+        phase_head, mod_head = torch.chunk(head, 2, dim=2)
+        phase_relation, mod_relation, bias_relation = torch.chunk(rel, 3, dim=2)
+        phase_tail, mod_tail = torch.chunk(tail, 2, dim=2)
+
+        phase_head = phase_head / (self.embedding_range.item() / self.pi)
+        phase_relation = phase_relation / (self.embedding_range.item() / self.pi)
+        phase_tail = phase_tail / (self.embedding_range.item() / self.pi)
+
+        if batch_type == BatchType.HEAD_BATCH:
+            phase_score = phase_head + (phase_relation - phase_tail)
+        else:
+            phase_score = (phase_head + phase_relation) - phase_tail
+
+        mod_relation = torch.abs(mod_relation)
+        bias_relation = torch.clamp(bias_relation, max=1)
+        indicator = (bias_relation < -mod_relation)
+        bias_relation[indicator] = -mod_relation[indicator]
+
+        r_score = mod_head * (mod_relation + bias_relation) - mod_tail * (1 - bias_relation)
+
+        phase_score = torch.sum(torch.abs(torch.sin(phase_score / 2)), dim=2) * self.phase_weight
+        r_score = torch.norm(r_score, dim=2) * self.modulus_weight
+
+        return self.gamma.item() - (phase_score + r_score)
+
+    def train_step(self, model, optimizer, train_iterator, args):
+        model.train()
+        optimizer.zero_grad()
+
+        positive_sample, negative_sample, subsampling_weight, batch_type = next(train_iterator)
+
+        positive_sample = positive_sample.cuda()
+        negative_sample = negative_sample.cuda()
+        subsampling_weight = subsampling_weight.cuda()
+
+        negative_score = model((positive_sample, negative_sample), batch_type=batch_type)
+        negative_score = (F.softmax(negative_score * args.adversarial_temperature, dim=1).detach()
+                          * F.logsigmoid(-negative_score)).sum(dim=1)
+
+        positive_score = model(positive_sample)
+        positive_score = F.logsigmoid(positive_score).squeeze(dim=1)
+
+        positive_sample_loss = - (subsampling_weight * positive_score).sum() / subsampling_weight.sum()
+        negative_sample_loss = - (subsampling_weight * negative_score).sum() / subsampling_weight.sum()
+        loss = (positive_sample_loss + negative_sample_loss) / 2
+
+        loss.backward()
+        optimizer.step()
+
+        with torch.no_grad():
+            for triple in positive_sample:
+                head, relation, tail = triple
+                head, tail = head.item(), tail.item()
+                relation_name = [key for key, value in self.relation_dict.items() if value == relation.item()][0]
+
+                head_mod = torch.mean(self.entity_embedding[head][self.hidden_dim:]).item()
+                tail_mod = torch.mean(self.entity_embedding[tail][self.hidden_dim:]).item()
+
+                if relation_name in ["_hypernym", "_instance_hypernym"]:
+                    if tail_mod > head_mod:
+                        scale_factor = tail_mod / head_mod
+                        self.entity_embedding[head][self.hidden_dim:] *= scale_factor
+
+                elif relation_name == "_member_meronym":
+                    if head_mod > tail_mod:
+                        scale_factor = head_mod / tail_mod
+                        self.entity_embedding[tail][self.hidden_dim:] *= scale_factor
+
+        log = {
+            'positive_sample_loss': positive_sample_loss.item(),
+            'negative_sample_loss': negative_sample_loss.item(),
+            'loss': loss.item()
+        }
+
+        return log
+
 
 
 class TransE(KGEModel):
